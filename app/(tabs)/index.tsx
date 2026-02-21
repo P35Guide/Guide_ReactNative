@@ -1,98 +1,139 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { api } from '../../api';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+// визначити форму об'єкта місця, який повертається API
+interface Place {
+  id?: string;
+  displayName?: string;
+  name?: string;
+  shortFormattedAddress?: string;
+  rating?: number;
 }
 
+// необов’язкова форма відповіді від searchNearby
+interface NearbyPlacesResponse {
+  places?: Place[];
+}
+
+
+
+
+
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
+
+export default function Index() {
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    const requestPayload = {
+      // координати для тесту
+      locationRestriction: {
+        circle: {
+          center: { latitude: 50.4501, longitude: 30.5234 },
+          radius: 1000.0
+        }
+      },
+      includedTypes: ["ресторан", "кафе"]
+    };
+
+    try {
+      console.log("запит", requestPayload);
+      const data = (await api.places.searchNearby(requestPayload)) as NearbyPlacesResponse;
+      console.log("відповідь API", data);
+      setPlaces(data.places ?? []);
+    } catch (error: any) {
+      console.error("searchNearby помилка", error);
+      alert("Помилка зв'язку: " + (error.message ?? JSON.stringify(error)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>Місця поблизу</Text>
+
+      <TouchableOpacity style={styles.button} onPress={handleSearch}>
+        <Text style={styles.buttonText}>Знайти місце поблизу</Text>
+      </TouchableOpacity>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#a78bfa" style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList<Place>
+          data={places}
+          keyExtractor={(item, index) => item.id ?? index.toString()}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              {item.rating != null ? <Text style={styles.rating}>/{item.rating}</Text> : null}
+            </View>
+          )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Натисни кнопку, щоб знайти місця</Text>
+          }
+        />
+      )}
+    </View>
+  );
+}
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    paddingTop: 60,
+    paddingHorizontal: 20
+  },
+  header: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+    marginBottom: 20
+  },
+  button: {
+    backgroundColor: '#4f46e5',
+    padding: 15,
+    borderRadius: 10,
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 20
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  card: {
+    backgroundColor: '#1e293b',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)'
   },
+  title: {
+    color: '#a78bfa',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4
+  },
+  address: {
+    color: '#94a3b8',
+    fontSize: 14
+  },
+  rating: {
+    color: '#fbbf24',
+    marginTop: 8,
+    fontWeight: 'bold'
+  },
+  emptyText: {
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16
+  }
 });
