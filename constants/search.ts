@@ -13,7 +13,6 @@ export const POPULAR_TYPES: TypeOption[] = [
   { label: 'парки', value: 'park' },
   { label: 'шопінг', value: 'shopping_mall' },
 ];
-
 // мова відповіді від api.
 export const LANGUAGE_OPTIONS: TypeOption[] = [
   { label: 'українська', value: 'uk' },
