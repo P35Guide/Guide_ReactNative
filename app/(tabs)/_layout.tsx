@@ -5,9 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { SearchProvider } from '../../store/search-context';
+import { useAppLanguage } from '../../store/app-language-context';
+import { t } from '../../constants/i18n';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { appLanguage } = useAppLanguage();
 
   return (
     <SearchProvider>
@@ -41,14 +44,14 @@ export default function TabLayout() {
         <Tabs.Screen
           name="filters"
           options={{
-            title: 'Фільтри',
+            title: t('filtersTitle', appLanguage),
             tabBarIcon: ({ color }) => <Ionicons size={22} name="options-outline" color={color} />,
           }}
         />
         <Tabs.Screen
           name="places"
           options={{
-            title: 'Місця',
+            title: t('placesTitle', appLanguage),
             tabBarIcon: ({ color }) => <Ionicons size={22} name="map-outline" color={color} />,
           }}
         />

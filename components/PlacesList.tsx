@@ -5,6 +5,8 @@ import { globalStyles } from '../styles';
 import { useSearch } from '../store/search-context';
 import type { Place } from '../types/search';
 import { DAY_NAMES_EN, DAY_NAMES_UK } from '../constants/places';
+import { useAppLanguage } from '../store/app-language-context';
+import { t } from '../constants/i18n';
 
 // повертає назву сьогоднішнього дня у форматі api.
 const getTodayLabel = () => {
@@ -40,6 +42,7 @@ const buildMapsUrl = (item: Place) => {
 
 export default function PlacesList() {
   const { places, loading } = useSearch();
+  const { appLanguage } = useAppLanguage();
   const insets = useSafeAreaInsets();
   const topInset = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0);
   const [hoursModal, setHoursModal] = useState<{ title: string; lines: string[] } | null>(null);
@@ -55,7 +58,7 @@ export default function PlacesList() {
     const openInMaps = async () => {
       const url = buildMapsUrl(item);
       if (!url) {
-        Alert.alert('Немає адреси', 'Для цього місця немає достатньо даних, щоб відкрити карту.');
+        Alert.alert(t('noAddressTitle', appLanguage), t('noAddressHint', appLanguage));
         return;
       }
       await Linking.openURL(url);
@@ -84,14 +87,14 @@ export default function PlacesList() {
             )}
             {item.openNow != null ? (
               <Text style={[globalStyles.imageStatusBadge, item.openNow ? globalStyles.pillOpen : globalStyles.pillClosed]}>
-                {item.openNow ? 'Відчинено' : 'Зачинено'}
+                {item.openNow ? t('openNow', appLanguage) : t('closedNow', appLanguage)}
               </Text>
             ) : null}
           </View>
           {/* якщо не підтягнулось фото - текст тоді */}
           {!hasImage ? (
             <View style={globalStyles.placeImageFallback}>
-              <Text style={globalStyles.placeImageFallbackText}>Фото відсутнє</Text>
+              <Text style={globalStyles.placeImageFallbackText}>{t('noPhoto', appLanguage)}</Text>
             </View>
           ) : null}
         </View>
@@ -103,23 +106,23 @@ export default function PlacesList() {
           <View style={globalStyles.detailRow}>
             <Text style={globalStyles.rating}>★ {item.rating ?? 'N/A'}</Text>
             {item.userRatingCount != null ? (
-              <Text style={globalStyles.muted}>({item.userRatingCount} відгуків)</Text>
+              <Text style={globalStyles.muted}>({item.userRatingCount} {t('ratingReviews', appLanguage)})</Text>
             ) : null}
           </View>
 
           {/* блок з графікос роботи */}
           {todayHours ? (
             <View style={globalStyles.hoursRow}>
-              <Text style={globalStyles.sectionTitle}>Графік роботи:</Text>
+              <Text style={globalStyles.sectionTitle}>{t('hoursTitle', appLanguage)}</Text>
               <Text style={globalStyles.hoursText}>{todayHours}</Text>
               {item.weekdayDescriptions && item.weekdayDescriptions.length > 1 ? (
                 <TouchableOpacity
                   onPress={() => setHoursModal({
-                    title: item.displayName ?? 'Графік роботи',
+                    title: item.displayName ?? t('hoursModalTitle', appLanguage),
                     lines: item.weekdayDescriptions ?? []
                   })}
                 >
-                  <Text style={globalStyles.link}>Показати всі</Text>
+                  <Text style={globalStyles.link}>{t('showAll', appLanguage)}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -127,23 +130,23 @@ export default function PlacesList() {
 
           {/*адреса та контакти */}
           {item.shortFormattedAddress ? (
-            <Text style={globalStyles.address}>Адреса: {item.shortFormattedAddress}</Text>
+            <Text style={globalStyles.address}>{t('address', appLanguage)}: {item.shortFormattedAddress}</Text>
           ) : null}
           {item.phoneNumber ? (
-            <Text style={globalStyles.address}>Телефон: {item.phoneNumber}</Text>
+            <Text style={globalStyles.address}>{t('phone', appLanguage)}: {item.phoneNumber}</Text>
           ) : null}
 
           {/*лінк на сайт */}
           {item.websiteUri ? (
             <TouchableOpacity onPress={() => Linking.openURL(item.websiteUri!)}>
-              <Text style={globalStyles.link}>Офіційний сайт</Text>
+              <Text style={globalStyles.link}>{t('officialSite', appLanguage)}</Text>
             </TouchableOpacity>
           ) : null}
 
           {/*короткий опис з апі, якщо есть*/}
           {summary ? (
             <View style={globalStyles.summaryBlock}>
-              <Text style={globalStyles.sectionTitle}>Про місце:</Text>
+              <Text style={globalStyles.sectionTitle}>{t('aboutPlace', appLanguage)}</Text>
               <Text style={globalStyles.summaryText}>{summary}</Text>
             </View>
           ) : null}
@@ -162,8 +165,8 @@ export default function PlacesList() {
           !loading ? (
             <View style={globalStyles.emptyState}>
               {/* підказка, коли список порожній */}
-              <Text style={globalStyles.emptyTitle}>Задайте дані у фільтрі</Text>
-              <Text style={globalStyles.emptyText}>Натисніть "Пошук поруч" у вкладці "Фільтри"</Text>
+              <Text style={globalStyles.emptyTitle}>{t('emptyTitle', appLanguage)}</Text>
+              <Text style={globalStyles.emptyText}>{t('emptyText', appLanguage)}</Text>
             </View>
           ) : null
         }
@@ -174,13 +177,13 @@ export default function PlacesList() {
       {showMapHint ? (
         <View style={[globalStyles.mapHintFloating, { bottom: Math.max(70, insets.bottom + 58) }]}>
           <View style={globalStyles.mapHintHeader}>
-            <Text style={globalStyles.mapHintTitle}>Підказка</Text>
+            <Text style={globalStyles.mapHintTitle}>{t('hintTitle', appLanguage)}</Text>
             <TouchableOpacity onPress={() => setShowMapHint(false)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-              <Text style={globalStyles.mapHintClose}>✕</Text>
+              <Text style={globalStyles.mapHintClose}>{t('mapHintClose', appLanguage)}</Text>
             </TouchableOpacity>
           </View>
           <Text style={globalStyles.mapHintText}>
-            При натисканні на місце вас буде перенаправлено за його адресою в Google Maps.
+            {t('hintText', appLanguage)}
           </Text>
         </View>
       ) : null}
@@ -201,7 +204,7 @@ export default function PlacesList() {
               ))}
             </View>
             <TouchableOpacity style={globalStyles.modalClose} onPress={() => setHoursModal(null)}>
-              <Text style={globalStyles.modalCloseText}>Закрити</Text>
+              <Text style={globalStyles.modalCloseText}>{t('close', appLanguage)}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -209,4 +212,3 @@ export default function PlacesList() {
     </View>
   );
 }
-

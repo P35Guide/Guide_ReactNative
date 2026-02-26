@@ -22,7 +22,6 @@ export const globalStyles = StyleSheet.create({
     // однакові відступи по боках.
     contentPadding: {
         paddingHorizontal: 20,
-        paddingTop: 48,
     },
     // верхній блок з назвою yummap і радіусом.
     hero: {

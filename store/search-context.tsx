@@ -1,9 +1,11 @@
 ﻿// всі налаштування пошуку радіус і тд
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import * as Location from 'expo-location';
 import { api } from '../api';
 import type { Place, SearchSettings } from '../types/search';
+import { currentPhoneLanguage, t } from '../constants/i18n';
+import { useAppLanguage } from './app-language-context';
 
 type SearchContextValue = {
   settings: SearchSettings;
@@ -28,6 +30,7 @@ const clampNumber = (value: string, min: number, max: number, fallback: number) 
 
 // тут живе весь стан пошуку
 export function SearchProvider({ children }: { children: React.ReactNode }) {
+  const { appLanguage } = useAppLanguage();
   const [settings, setSettingsState] = useState<SearchSettings>({
     radius: '1000',
     maxResults: '10',
@@ -35,7 +38,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     excludedTypes: [],
     // за замовчуванням не фільтруємо тільки відкриті
     openNowOnly: false,
-    languageCode: 'uk',
+    languageCode: currentPhoneLanguage,
     rankPreference: 'POPULARITY',
   });
   const [places, setPlaces] = useState<Place[]>([]);
@@ -45,6 +48,11 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const setSettings = useCallback((next: Partial<SearchSettings>) => {
     setSettingsState(prev => ({ ...prev, ...next }));
   }, []);
+
+  // синхронізуємо мову відповіді api з мовою інтерфейсу
+  useEffect(() => {
+    setSettingsState(prev => (prev.languageCode === appLanguage ? prev : { ...prev, languageCode: appLanguage }));
+  }, [appLanguage]);
 
   // додає або прибирає тип у бажані і удаляє з виключити якщо есть
   const toggleIncluded = useCallback((value: string) => {
@@ -75,7 +83,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       // доступ до геолокації
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Помилка', 'Потрібен доступ до GPS');
+        Alert.alert(t('errorTitle', appLanguage), t('gpsRequired', appLanguage));
         return false;
       }
 
@@ -123,9 +131,9 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       const message = e instanceof Error ? e.message : '';
       const hint = message.includes('Server error:')
-        ? ' Спробуй український синонім(одне слово) або англійською'
+        ? ` ${t('invalidTypeHint', appLanguage)}`
         : '';
-      Alert.alert('Помилка', `Не вдалося завантажити дані.${hint}`);
+      Alert.alert(t('errorTitle', appLanguage), `${t('loadFailed', appLanguage)}${hint}`);
       return false;
     } finally {
       setLoading(false);

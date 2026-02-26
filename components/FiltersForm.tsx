@@ -1,38 +1,62 @@
 ﻿import { useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, Switch } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSearch } from '../store/search-context';
 import { globalStyles, theme } from '../styles';
-
-type TypeOption = {
-  label: string;
-  value: string;
-};
+import { AppLanguage, currentPhoneLanguage, t } from '../constants/i18n';
+import { useAppLanguage } from '../store/app-language-context';
 
 // константо для фільтрів типа більш популярні
-const POPULAR_TYPES: TypeOption[] = [
-  { label: 'Ресторани', value: 'restaurant' },
-  { label: 'Кавʼярні', value: 'coffee_shop' },
-  { label: 'Піцерії', value: 'pizza_restaurant' },
-  { label: 'Фастфуд', value: 'fast_food_restaurant' },
-  { label: 'Пекарні', value: 'bakery' },
-  { label: 'Суші', value: 'sushi_restaurant' },
-  { label: 'Бари', value: 'bar' },
-  { label: 'Музеї', value: 'museum' },
-  { label: 'Парки', value: 'park' },
-  { label: 'Шопінг', value: 'shopping_mall' },
+type PopularTypeLabelKey =
+  | 'typeRestaurant'
+  | 'typeCoffeeShop'
+  | 'typePizza'
+  | 'typeFastFood'
+  | 'typeBakery'
+  | 'typeSushi'
+  | 'typeBar'
+  | 'typeMuseum'
+  | 'typePark'
+  | 'typeShoppingMall';
+
+const POPULAR_TYPES: Array<{ labelKey: PopularTypeLabelKey; value: string }> = [
+  { labelKey: 'typeRestaurant', value: 'restaurant' },
+  { labelKey: 'typeCoffeeShop', value: 'coffee_shop' },
+  { labelKey: 'typePizza', value: 'pizza_restaurant' },
+  { labelKey: 'typeFastFood', value: 'fast_food_restaurant' },
+  { labelKey: 'typeBakery', value: 'bakery' },
+  { labelKey: 'typeSushi', value: 'sushi_restaurant' },
+  { labelKey: 'typeBar', value: 'bar' },
+  { labelKey: 'typeMuseum', value: 'museum' },
+  { labelKey: 'typePark', value: 'park' },
+  { labelKey: 'typeShoppingMall', value: 'shopping_mall' },
 ];
 
-// мови відповіді від api ! todo
-const LANGUAGE_OPTIONS = [
-  { label: 'Українська', value: 'uk' },
-  { label: 'English', value: 'en' },
+const buildTypeLabels = (lang: AppLanguage) => ({
+  typeRestaurant: t('typeRestaurant', lang),
+  typeCoffeeShop: t('typeCoffeeShop', lang),
+  typePizza: t('typePizza', lang),
+  typeFastFood: t('typeFastFood', lang),
+  typeBakery: t('typeBakery', lang),
+  typeSushi: t('typeSushi', lang),
+  typeBar: t('typeBar', lang),
+  typeMuseum: t('typeMuseum', lang),
+  typePark: t('typePark', lang),
+  typeShoppingMall: t('typeShoppingMall', lang),
+});
+
+const UI_LANGUAGE_OPTIONS: Array<{ labelKey: 'langUk' | 'langEn'; value: AppLanguage }> = [
+  { labelKey: 'langUk', value: 'uk' },
+  { labelKey: 'langEn', value: 'en' },
 ];
 
 // варіанти сортування, які підтримує api.
-const SORT_OPTIONS = [
-  { label: 'Популярність', value: 'POPULARITY' },
-  { label: 'Відстань', value: 'DISTANCE' },
+type SortLabelKey = 'sortPopularity' | 'sortDistance';
+
+const SORT_OPTIONS: Array<{ labelKey: SortLabelKey; value: string }> = [
+  { labelKey: 'sortPopularity', value: 'POPULARITY' },
+  { labelKey: 'sortDistance', value: 'DISTANCE' },
 ];
 
 // базові псевдоніми для найчастіших введень українською/транслітом.
@@ -87,8 +111,21 @@ const UKR_TO_LAT: Record<string, string> = {
 export default function FiltersForm() {
   const router = useRouter();
   const { settings, setSettings, toggleIncluded, toggleExcluded, loading, runSearch } = useSearch();
+  const { appLanguage, setAppLanguage, resetToDeviceLanguage, usesSystemLanguage } = useAppLanguage();
+  const insets = useSafeAreaInsets();
   const [customInc, setCustomInc] = React.useState('');
   const [customExc, setCustomExc] = React.useState('');
+  const typeLabels = buildTypeLabels(appLanguage);
+  const systemLanguageLabel = (() => {
+    switch (currentPhoneLanguage) {
+      case 'uk':
+        return t('langUk', appLanguage);
+      case 'de':
+        return t('langDe', appLanguage);
+      default:
+        return t('langEn', appLanguage);
+    }
+  })();
 
   // прибираємо зайві пробіли й робимо єдиний формат рядка.
   const normalizeInput = (value: string) =>
@@ -137,8 +174,8 @@ export default function FiltersForm() {
     const next = resolvePlaceType(val);
     if (!next) {
       Alert.alert(
-        'Невірний тип',
-        'Спробуй український синонім(одне слово) або англійською'
+        t('invalidTypeTitle', appLanguage),
+        t('invalidTypeHint', appLanguage)
       );
       return;
     }
@@ -149,34 +186,56 @@ export default function FiltersForm() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={globalStyles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={{
+          paddingBottom: Math.max(120, insets.bottom + 96),
+          paddingTop: Math.max(16, insets.top + 12),
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={globalStyles.contentPadding}>
           {/* верхній з назвою та коротким описом */}
           <View style={globalStyles.hero}>
             <View>
-              <Text style={globalStyles.heroTitle}>YumMap</Text>
-              <Text style={globalStyles.heroSubtitle}>Налаштуй і шукай</Text>
+              <Text style={globalStyles.heroTitle}>{t('appName', appLanguage)}</Text>
+              <Text style={globalStyles.heroSubtitle}>{t('heroSubtitle', appLanguage)}</Text>
             </View>
             <View style={globalStyles.heroBadge}>
-              <Text style={globalStyles.heroBadgeText}>{settings.radius} м</Text>
+              <Text style={globalStyles.heroBadgeText}>{settings.radius} {t('metersShort', appLanguage)}</Text>
             </View>
           </View>
 
-          {/* вибір мови запиту до арі */}
+          {/* блок, який показує мову телефону та дає перейти назад */}
           <View style={globalStyles.settingsBlock}>
-            <Text style={globalStyles.label}>Language</Text>
+            <Text style={globalStyles.label}>{t('languageSystem', appLanguage)}</Text>
+            <View style={globalStyles.row}>
+              <Text style={globalStyles.helperText}>{systemLanguageLabel}</Text>
+              {!usesSystemLanguage && (
+                <TouchableOpacity
+                  onPress={resetToDeviceLanguage}
+                  style={[globalStyles.chip, { borderColor: theme.primary, backgroundColor: '#fff' }]}
+                >
+                  <Text style={[globalStyles.chipText, { color: theme.primary }]}>{t('useDeviceLanguage', appLanguage)}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* мова інтерфейсу */}
+          <View style={globalStyles.settingsBlock}>
+            <Text style={globalStyles.label}>{t('languageUi', appLanguage)}</Text>
             <View style={globalStyles.chipContainer}>
-              {LANGUAGE_OPTIONS.map(opt => (
+              {UI_LANGUAGE_OPTIONS.map(opt => (
                 <TouchableOpacity
                   key={opt.value}
-                  onPress={() => setSettings({ languageCode: opt.value })} // todo 
+                  onPress={() => setAppLanguage(opt.value)}
                   style={[
                     globalStyles.chip,
-                    settings.languageCode === opt.value && globalStyles.chipSelectedPrimary
+                    appLanguage === opt.value && globalStyles.chipSelectedPrimary
                   ]}
                 >
-                  <Text style={[globalStyles.chipText, settings.languageCode === opt.value && globalStyles.chipTextSelected]}>
-                    {opt.label}
+                  <Text style={[globalStyles.chipText, appLanguage === opt.value && globalStyles.chipTextSelected]}>
+                    {t(opt.labelKey, appLanguage)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -186,7 +245,7 @@ export default function FiltersForm() {
           {/* радіус і максимальна кількість результатів */}
           <View style={[globalStyles.settingsBlock, globalStyles.settingsRow]}>
             <View style={globalStyles.settingsColumn}>
-              <Text style={globalStyles.label}>Радіус (м)</Text>
+              <Text style={globalStyles.label}>{t('radiusLabel', appLanguage)}</Text>
               <TextInput
                 value={settings.radius}
                 onChangeText={(val) => setSettings({ radius: val })}
@@ -195,10 +254,10 @@ export default function FiltersForm() {
                 placeholder="1000"
                 placeholderTextColor={theme.textLight}
               />
-              <Text style={globalStyles.helperText}>Мінімум 1000</Text>
+              <Text style={globalStyles.helperText}>{t('minRadiusHint', appLanguage)}</Text>
             </View>
             <View style={globalStyles.settingsColumn}>
-              <Text style={globalStyles.label}>Максимум</Text>
+              <Text style={globalStyles.label}>{t('maxLabel', appLanguage)}</Text>
               <TextInput
                 value={settings.maxResults}
                 onChangeText={(val) => setSettings({ maxResults: val })}
@@ -207,7 +266,7 @@ export default function FiltersForm() {
                 placeholder="10"
                 placeholderTextColor={theme.textLight}
               />
-              <Text style={globalStyles.helperText}>Від 1 до 20 результатів</Text>
+              <Text style={globalStyles.helperText}>{t('maxResultsHint', appLanguage)}</Text>
             </View>
           </View>
 
@@ -215,9 +274,9 @@ export default function FiltersForm() {
           <View style={globalStyles.settingsBlock}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={globalStyles.label}>Лише відкриті зараз</Text>
+                <Text style={globalStyles.label}>{t('openNowLabel', appLanguage)}</Text>
                 <Text style={globalStyles.helperText}>
-                  Увімкни, щоб бекенд повертав тільки заклади зі статусом «Відчинено».
+                  {t('openNowHint', appLanguage)}
                 </Text>
               </View>
               <Switch
@@ -231,7 +290,7 @@ export default function FiltersForm() {
 
           {/* типи, які обов’язково включаємо в пошук */}
           <View style={globalStyles.settingsBlock}>
-            <Text style={[globalStyles.label, { color: theme.accentGreen }]}>Додати бажання</Text>
+            <Text style={[globalStyles.label, { color: theme.accentGreen }]}>{t('includeTitle', appLanguage)}</Text>
             <View style={globalStyles.chipContainer}>
               {POPULAR_TYPES.map(opt => (
                 <TouchableOpacity
@@ -243,7 +302,7 @@ export default function FiltersForm() {
                   ]}
                 >
                   <Text style={[globalStyles.chipText, settings.includedTypes.includes(opt.value) && globalStyles.chipTextSelected]}>
-                    {opt.label}
+                    {typeLabels[opt.labelKey]}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -272,14 +331,14 @@ export default function FiltersForm() {
                 onPress={() => addCustomType(customInc, (value) => toggleIncluded(value), () => setCustomInc(''))}
                 style={[globalStyles.addButton, { backgroundColor: theme.accentGreen }]}
               >
-                <Text style={globalStyles.addButtonText}>Додати</Text>
+                <Text style={globalStyles.addButtonText}>{t('add', appLanguage)}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* типи, які треба виключити */}
           <View style={globalStyles.settingsBlock}>
-            <Text style={[globalStyles.label, { color: theme.accentRed }]}>Не хочу бачити</Text>
+            <Text style={[globalStyles.label, { color: theme.accentRed }]}>{t('excludeTitle', appLanguage)}</Text>
             <View style={globalStyles.chipContainer}>
               {POPULAR_TYPES.map(opt => (
                 <TouchableOpacity
@@ -291,7 +350,7 @@ export default function FiltersForm() {
                   ]}
                 >
                   <Text style={[globalStyles.chipText, settings.excludedTypes.includes(opt.value) && globalStyles.chipTextSelected]}>
-                    {opt.label}
+                    {typeLabels[opt.labelKey]}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -320,14 +379,14 @@ export default function FiltersForm() {
                 onPress={() => addCustomType(customExc, (value) => toggleExcluded(value), () => setCustomExc(''))}
                 style={[globalStyles.addButton, { backgroundColor: theme.accentRed }]}
               >
-                <Text style={globalStyles.addButtonText}>Додати</Text>
+                <Text style={globalStyles.addButtonText}>{t('add', appLanguage)}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* сортування результатів */}
           <View style={globalStyles.settingsBlock}>
-            <Text style={globalStyles.label}>Сортування</Text>
+            <Text style={globalStyles.label}>{t('sortTitle', appLanguage)}</Text>
             <View style={globalStyles.segmented}>
               {SORT_OPTIONS.map(opt => (
                 <TouchableOpacity
@@ -339,7 +398,7 @@ export default function FiltersForm() {
                   ]}
                 >
                   <Text style={[globalStyles.segmentText, settings.rankPreference === opt.value && globalStyles.segmentTextActive]}>
-                    {opt.label}
+                    {t(opt.labelKey, appLanguage)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -355,7 +414,7 @@ export default function FiltersForm() {
             }}
             disabled={loading}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={globalStyles.buttonText}>Пошук поруч</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={globalStyles.buttonText}>{t('searchBtn', appLanguage)}</Text>}
           </TouchableOpacity>
         </View>
       </ScrollView>
