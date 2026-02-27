@@ -32,3 +32,19 @@ export type TypeOption = {
   label: string;
   value: string;
 };
+
+// Міні DTO для улюблених місць.
+export type FavouritePlace = {
+  id: number;
+  nameOfPlace: string;
+  address: string;
+  description: string;
+  photos: string[];
+};
+
+export type AddFavouritePlacePayload = {
+  nameOfPlace: string;
+  address: string;
+  description: string;
+  photoSlots: string[]; // базові64 без префікса, довжина >=5
+};

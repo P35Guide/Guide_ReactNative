@@ -55,6 +55,13 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => <Ionicons size={22} name="map-outline" color={color} />,
           }}
         />
+        <Tabs.Screen
+          name="favourites"
+          options={{
+            title: t('favouritePlacesTitle', appLanguage),
+            tabBarIcon: ({ color }) => <Ionicons size={22} name="heart-outline" color={color} />,
+          }}
+        />
       </Tabs>
     </SearchProvider>
   );
